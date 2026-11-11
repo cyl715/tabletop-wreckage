@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabletop Wreckage — Progress Report</title>
+<meta name="description" content="Final Year Project progress report: Tabletop Wreckage, a 3D household physics-puzzle shooting game for mobile.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%23E9E4DA'/%3E%3Cpath%20d='M16%206c1.6%200%202.6.9%202.6%202.1%200%201-.5%201.6-1.1%202.1%203.9%201.6%206.5%205%206.5%209.1%200%204.1-3.6%206.7-8%206.7s-8-2.6-8-6.7c0-4.1%202.6-7.5%206.5-9.1-.6-.5-1.1-1.1-1.1-2.1C13.4%206.9%2014.4%206%2016%206z'%20fill='%23214C86'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="preconnect" href="https://sf3-scmcdn-cn.feishucdn.com" crossorigin>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#E9E4DA;
+  --surface:#F6F2E9;
+  --ink:#191A1C;
+  --muted:#6B6558;
+  --line:#CFC6B5;
+  --line-soft:#DDD5C6;
+  --cobalt:#214C86;
+  --cobalt-soft:#33517F;
+  --clay:#9B6239;
+  --flag:#A33A28;
+  --sage:#4F6350;
+  --maxw:720px;
+  --serif:"Newsreader","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans","Helvetica Neue",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='140'%20height='140'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='.85'%20numOctaves='3'/%3E%3C/filter%3E%3Crect%20width='140'%20height='140'%20filter='url(%23n)'/%3E%3C/svg%3E");
+}
+a{color:var(--cobalt);text-decoration:none;border-bottom:1px solid rgba(33,76,134,.35)}
+a:hover{border-bottom-color:var(--cobalt)}
+img{max-width:100%;display:block;height:auto}
+::selection{background:#214C8622}
+
+/* ---------- layout ---------- */
+.page{
+  position:relative;
+  z-index:1;
+  display:block;
+  max-width:1120px;
+  margin:0 auto;
+  padding:0 20px 40px;
+}
+@media(min-width:1000px){
+  .page{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;padding:0 32px 80px;align-items:start;}
+}
+
+/* ---------- mobile bar ---------- */
+.mobilebar{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 -20px;padding:10px 20px;
+  background:rgba(233,228,218,.97);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.mobilebar .mb-name{font-family:var(--serif);font-size:1.05rem;line-height:1.2}
+.mobilebar button{
+  font-family:var(--sans);font-size:.82rem;letter-spacing:.01em;
+  color:var(--ink);background:none;border:1px solid var(--line);
+  padding:7px 12px;border-radius:2px;cursor:pointer;min-height:38px;
+}
+@media(min-width:1000px){.mobilebar{display:none}}
+
+/* ---------- sidebar ---------- */
+.rail{display:none}
+@media(min-width:1000px){
+  .rail{
+    display:block;position:sticky;top:0;
+    max-height:100vh;overflow:auto;
+    padding:44px 0 32px;
+    scrollbar-width:thin;
+  }
+}
+.rail-mark{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+.rail-mark svg{width:26px;height:26px;flex:none}
+.rail-mark .rm-name{font-family:var(--serif);font-size:1.02rem;line-height:1.25}
+.rail-mark .rm-sub{font-size:.72rem;color:var(--muted);letter-spacing:.02em}
+.rail nav{display:flex;flex-direction:column;gap:2px}
+.rail a{
+  display:grid;grid-template-columns:26px 1fr;gap:8px;
+  padding:8px 8px 8px 0;border:0;
+  font-size:.84rem;line-height:1.35;color:var(--muted);
+  border-left:2px solid transparent;
+  transition:color .18s ease,border-color .18s ease,background .18s ease;
+}
+.rail a .rn{font-family:var(--serif);font-size:.8rem;color:#9A9184;padding-top:1px}
+.rail a:hover{color:var(--ink);background:linear-gradient(90deg,rgba(33,76,134,.05),transparent 70%)}
+.rail a.active{color:var(--ink);border-left-color:var(--cobalt);background:linear-gradient(90deg,rgba(33,76,134,.08),transparent 70%)}
+.rail a.active .rn{color:var(--cobalt)}
+.rail-foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:.72rem;color:var(--muted);line-height:1.5}
+@media(min-width:1000px){
+  .rail a{padding-left:12px}
+}
+
+/* mobile nav overlay */
+.navpanel{
+  display:none;
+  position:fixed;inset:56px 0 0;z-index:35;
+  background:var(--surface);
+  padding:18px 22px 40px;overflow:auto;
+  border-top:1px solid var(--line);
+}
+.navpanel.open{display:block}
+.navpanel a{display:block;padding:11px 0;font-size:.95rem;color:var(--ink);border-bottom:1px solid var(--line-soft)}
+.navpanel a .pnum{font-family:var(--serif);color:var(--muted);margin-right:10px}
+
+/* ---------- article ---------- */
+main{padding-top:8px;min-width:0}
+article{max-width:var(--maxw)}
+
+.cover{padding-top:28px}
+@media(min-width:1000px){.cover{padding-top:44px}}
+.kicker{
+  margin:0 0 14px;
+  font-family:var(--serif);font-style:italic;font-size:.95rem;color:var(--muted);
+  letter-spacing:.01em;
+}
+h1{
+  margin:0 0 14px;
+  font-family:var(--serif);font-weight:500;
+  font-size:clamp(2.5rem,9vw,4.4rem);
+  line-height:.98;letter-spacing:-.02em;
+}
+.lede{
+  margin:0 0 26px;
+  font-size:clamp(1rem,2.6vw,1.12rem);
+  line-height:1.6;color:#33332F;
+  max-width:56ch;
+}
+.meta{
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  margin:0 0 26px;background:var(--line-soft);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+}
+.meta div{background:var(--paper);padding:9px 12px 10px}
+.meta dt{font-size:.7rem;color:var(--muted);margin:0 0 2px;letter-spacing:.04em}
+.meta dd{margin:0;font-size:.86rem;line-height:1.3}
+@media(min-width:680px){.meta{grid-template-columns:repeat(4,1fr)}}
+
+.hero{margin:0 0 34px;position:relative}
+.hero .frame{
+  position:relative;overflow:hidden;background:#2A2724;
+  border:1px solid var(--line);
+}
+.hero img{width:100%;aspect-ratio:4/3;object-fit:cover;object-position:50% 42%}
+.hero .tag{
+  position:absolute;display:block;
+  font-size:.68rem;line-height:1.3;letter-spacing:.01em;
+  padding:4px 8px;background:rgba(20,20,20,.86);color:#F2EDE3;
+  border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(2px);
+}
+.hero .tag.t1{left:2%;bottom:6%}
+.hero .tag.t2{right:2%;bottom:6%;border-color:rgba(232,111,85,.6)}
+@media(max-width:520px){.hero .tag{font-size:.62rem;padding:3px 6px}}
+.hero figcaption{
+  margin-top:9px;font-size:.76rem;color:var(--muted);line-height:1.5;
+}
+.hero figcaption b{color:var(--ink);font-weight:500}
+
+/* facts */
+.facts{
+  margin:0 0 8px;display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  background:var(--line-soft);border:1px solid var(--line-soft);
+}
+.facts div{background:var(--surface);padding:12px 13px 13px}
+.facts dt{font-size:.7rem;color:var(--muted);margin:0 0 3px;letter-spacing:.03em}
+.facts dd{margin:0;font-family:var(--serif);font-size:1.02rem;line-height:1.3}
+@media(min-width:640px){.facts{grid-template-columns:repeat(3,1fr)}}
+
+/* sections */
+section{margin-top:54px;scroll-margin-top:70px}
+@media(min-width:1000px){section{margin-top:64px;scroll-margin-top:24px}}
+.sec-head{border-top:1px solid var(--line);padding-top:16px;margin-bottom:20px}
+.seclabel{
+  display:flex;align-items:baseline;gap:10px;
+  font-family:var(--serif);color:var(--muted);font-size:.84rem;
+  margin-bottom:6px;
+}
+.seclabel .num{font-size:1.05rem;color:var(--cobalt)}
+h2{
+  margin:0;font-family:var(--serif);font-weight:500;
+  font-size:clamp(1.55rem,4.4vw,2.15rem);line-height:1.12;letter-spacing:-.012em;
+}
+h3{
+  margin:34px 0 8px;font-family:var(--serif);font-weight:500;
+  font-size:1.28rem;line-height:1.25;
+}
+h3 .hnum{color:var(--muted);font-size:.95rem;margin-right:8px}
+p{margin:0 0 14px;max-width:68ch}
+p.lead{font-size:1.03rem;color:#2E2E2A}
+ul,ol{margin:0 0 16px;padding-left:1.15em;max-width:68ch}
+li{margin:0 0 7px}
+li::marker{color:var(--cobalt)}
+.small{font-size:.82rem;color:var(--muted)}
+
+/* figures */
+figure{margin:26px 0 30px}
+figure img{border:1px solid var(--line);background:#fff}
+figure figcaption{margin-top:9px;font-size:.76rem;color:var(--muted);line-height:1.55}
+figure figcaption .fno{font-family:var(--serif);color:var(--ink);margin-right:6px}
+.proof{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--line);
+  margin-bottom:12px;
+}
+.proof div{padding:10px 12px 11px 0}
+.proof .pv{display:block;font-family:var(--serif);font-size:1.55rem;line-height:1.1;color:var(--ink)}
+.proof .pl{display:block;font-size:.72rem;line-height:1.35;color:var(--muted);margin-top:4px;max-width:22ch}
+.shots{
+  display:flex;flex-wrap:wrap;gap:10px;
+  align-items:flex-start;
+}
+.shots img{border:1px solid var(--line);flex:0 0 auto}
+.shots img.wide{width:100%}
+@media(max-width:520px){.shots img.wide{height:260px;object-fit:cover;object-position:50% 0}}
+.shots img.phone{height:330px;width:auto;aspect-ratio:9/16;object-fit:cover;object-position:50% 8%}
+@media(max-width:520px){.shots img.phone{height:240px}}
+
+/* table */
+.tablewrap{margin:22px 0 28px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:.85rem}
+caption{
+  caption-side:top;text-align:left;font-size:.76rem;color:var(--muted);
+  padding-bottom:8px;
+}
+caption .tno{font-family:var(--serif);color:var(--ink);margin-right:6px}
+th,td{border-bottom:1px solid var(--line-soft);padding:11px 12px;vertical-align:top;text-align:left}
+thead th{
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);
+  font-weight:500;font-size:.76rem;color:var(--muted);letter-spacing:.02em;
+}
+tbody tr:last-child td{border-bottom:1px solid var(--line)}
+td em{font-style:normal;color:var(--muted)}
+
+/* callouts */
+.callout{
+  margin:24px 0;padding:16px 18px 14px;
+  background:var(--surface);
+  border-left:3px solid var(--cobalt);
+}
+.callout.warn{border-left-color:var(--flag);background:#F5EBE7}
+.callout h4{margin:0 0 6px;font-family:var(--serif);font-weight:500;font-size:1.02rem}
+.callout p{margin:0;font-size:.88rem;max-width:64ch}
+
+/* mechanics strip */
+.mech{
+  display:grid;grid-template-columns:1fr;gap:10px;margin:20px 0 26px;
+}
+@media(min-width:620px){.mech{grid-template-columns:1fr 1fr}}
+.mech .col{border:1px solid var(--line);background:var(--surface);padding:14px 15px}
+.mech .col h4{margin:0 0 2px;font-family:var(--serif);font-weight:500;font-size:1rem}
+.mech .col .tagline{font-size:.74rem;color:var(--muted);margin-bottom:10px}
+.mech .col ul{margin:0;padding-left:1.05em;font-size:.84rem}
+.mech .col li{margin-bottom:5px}
+
+/* scope */
+.scope{display:grid;grid-template-columns:1fr;gap:12px;margin:22px 0 8px}
+@media(min-width:620px){
+  .scope{grid-template-columns:1fr 1fr}
+  .scope .card:first-child{grid-column:1 / -1}
+}
+@media(min-width:900px){
+  .scope{grid-template-columns:1fr 1fr}
+  .scope .card:first-child{grid-column:1 / -1}
+  .scope .card:first-child ul{column-count:2;column-gap:26px}
+}
+.scope .card{border:1px solid var(--line);background:var(--surface);padding:16px}
+.scope .card h4{
+  display:flex;align-items:center;gap:8px;margin:0 0 10px;
+  font-family:var(--serif);font-weight:500;font-size:1rem;
+}
+.scope .card h4 .ico{width:16px;height:16px;flex:none}
+.scope .card ul{list-style:none;padding:0;margin:0;font-size:.84rem}
+.scope .card li{display:grid;grid-template-columns:14px 1fr;gap:8px;margin-bottom:8px;line-height:1.45}
+.scope .card li svg{width:13px;height:13px;margin-top:3px}
+.scope .card .count{font-size:.72rem;color:var(--muted);margin:10px 0 0}
+
+/* prototype demo */
+.demo{display:grid;gap:22px;margin:24px 0 6px}
+@media(min-width:700px){.demo{grid-template-columns:290px 1fr;gap:28px;align-items:start}}
+.device{width:100%;max-width:290px;margin:0 auto;background:#151515;border-radius:26px;padding:9px;border:1px solid #2C2C2C}
+.device video{display:block;width:100%;border-radius:19px;background:#000;aspect-ratio:352/780}
+.demo-notes h4{margin:0 0 10px;font-family:var(--serif);font-weight:500;font-size:1.06rem}
+.checks{list-style:none;margin:0;padding:0}
+.checks li{margin:0 0 12px;font-size:.88rem;line-height:1.55;padding-left:0}
+.checks li b{font-weight:600}
+.demo-cap{font-size:.76rem;color:var(--muted);margin:0 0 26px;max-width:64ch}
+
+/* timeline */
+.timeline{--rail:112px;position:relative;margin:26px 0 12px}
+.timeline::before{
+  content:"";position:absolute;left:calc(var(--rail) + 12px - 0.5px);top:4px;bottom:26px;
+  width:1px;background:var(--line);
+}
+@media(min-width:1000px){.timeline{--rail:136px}}
+.phase{
+  display:grid;grid-template-columns:var(--rail) 24px 1fr;
+  column-gap:14px;padding-bottom:26px;
+}
+.phase .when{padding-top:2px}
+.phase .when .range{font-family:var(--serif);font-size:.84rem;line-height:1.35;color:var(--ink)}
+.phase .when .dur{font-size:.7rem;line-height:1.35;color:var(--muted);margin-top:3px}
+.phase .dot{position:relative;display:flex;justify-content:center;padding-top:3px}
+.phase .dot span{
+  width:11px;height:11px;border-radius:50%;
+  background:var(--paper);border:2px solid var(--cobalt);
+}
+.phase.current .dot span{background:var(--cobalt)}
+.phase .body h4{
+  margin:0 0 4px;font-family:var(--serif);font-weight:500;
+  font-size:1.12rem;line-height:1.3;
+}
+.phase .body p{margin:0 0 8px;font-size:.85rem;color:var(--muted);max-width:60ch}
+.phase .body ul{margin:0;padding-left:1.05em;font-size:.86rem}
+.phase .body li{margin-bottom:5px}
+
+/* closing */
+.endnote{
+  margin-top:60px;border-top:1px solid var(--ink);padding-top:14px;
+  display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;
+  font-size:.76rem;color:var(--muted);
+}
+.endnote span{max-width:34ch}
+
+/* print */
+@media print{
+  body{background:#fff}
+  .rail,.mobilebar,.navpanel{display:none!important}
+  .page{display:block;max-width:none;padding:0}
+  article{max-width:none}
+  section{page-break-inside:auto;margin-top:32px}
+  .phase,.tablewrap,.callout,figure{break-inside:avoid}
+  a{color:var(--ink);border:0}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ===== mobile bar ===== -->
+  <div class="mobilebar">
+    <div class="mb-name">Tabletop Wreckage</div>
+    <button type="button" id="navToggle" aria-expanded="false" aria-controls="navPanel">Contents</button>
+  </div>
+
+  <div class="navpanel" id="navPanel">
+    <a href="#overview"><span class="pnum">01</span>Project overview</a>
+    <a href="#adaptation"><span class="pnum">02</span>Adaptation and design</a>
+    <a href="#fun"><span class="pnum">03</span>Fun and challenge</a>
+    <a href="#gameplay"><span class="pnum">04</span>Core gameplay</a>
+    <a href="#scope"><span class="pnum">05</span>Project scope</a>
+    <a href="#progress"><span class="pnum">06</span>Prototype progress</a>
+    <a href="#timeline"><span class="pnum">07</span>Timeline</a>
+  </div>
+
+  <!-- ===== sidebar ===== -->
+  <aside class="rail">
+    <div class="rail-mark">
+      <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <path d="M16 5.5c1.7 0 2.8 1 2.8 2.3 0 1-.5 1.7-1.2 2.2 4.1 1.7 6.8 5.3 6.8 9.6 0 4.3-3.8 7-8.4 7s-8.4-2.7-8.4-7c0-4.3 2.7-7.9 6.8-9.6-.7-.5-1.2-1.2-1.2-2.2C13.2 6.5 14.3 5.5 16 5.5z" fill="#214C86"/>
+      </svg>
+      <div>
+        <div class="rm-name">Tabletop Wreckage</div>
+        <div class="rm-sub">FYP progress report</div>
+      </div>
+    </div>
+    <nav id="railNav">
+      <a href="#overview"><span class="rn">01</span><span>Project overview</span></a>
+      <a href="#adaptation"><span class="rn">02</span><span>Adaptation and design</span></a>
+      <a href="#fun"><span class="rn">03</span><span>Fun and challenge</span></a>
+      <a href="#gameplay"><span class="rn">04</span><span>Core gameplay</span></a>
+      <a href="#scope"><span class="rn">05</span><span>Project scope</span></a>
+      <a href="#progress"><span class="rn">06</span><span>Prototype progress</span></a>
+      <a href="#timeline"><span class="rn">07</span><span>Timeline</span></a>
+    </nav>
+    <div class="rail-foot">
+      Chan Yat Leong<br>
+      Final Year Project<br>
+      Progress report<br>11 November 2026
+    </div>
+  </aside>
+
+  <main>
+  <article>
+
+    <!-- ===== cover ===== -->
+    <header class="cover" id="top">
+      <p class="kicker">Final Year Project — Progress Report</p>
+      <h1>Tabletop Wreckage</h1>
+      <p class="lede">A 3D household physics-puzzle shooting game for mobile: knock the clutter off the coffee table, and keep the antique vase standing.</p>
+
+      <dl class="meta">
+        <div><dt>Student</dt><dd>Chan Yat Leong</dd></div>
+        <div><dt>Programme</dt><dd>Final Year Project</dd></div>
+        <div><dt>Report date</dt><dd>11 November 2026</dd></div>
+        <div><dt>Reference title</dt><dd>Splash Buster</dd></div>
+      </dl>
+
+      <figure class="hero">
+        <div class="frame">
+          <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/HXRwb3tOsoiHSuxf6FScnGhCnbg" alt="A coffee table set with a stacked brick tower carrying drinking glasses, hard-cover books, and an antique vase circled in red as the protected object">
+          <div class="tag t1">Load-bearing brick tower</div>
+          <div class="tag t2">Protected vase</div>
+        </div>
+        <figcaption><b>The battlefield.</b> A coffee table, three kinds of household object with different physical behaviour, and one vase that ends the run if a player projectile touches it.</figcaption>
+      </figure>
+
+      <dl class="facts">
+        <div><dt>Camera</dt><dd>Fixed 45° overhead</dd></div>
+        <div><dt>Standard ammunition</dt><dd>20 per level</dd></div>
+        <div><dt>Turret positions</dt><dd>4, shared ammo</dd></div>
+        <div><dt>Playable levels</dt><dd>3</dd></div>
+        <div><dt>Object behaviours</dt><dd>3 material types</dd></div>
+        <div><dt>Team</dt><dd>Solo development</dd></div>
+      </dl>
+    </header>
+
+    <!-- ===== 1 overview ===== -->
+    <section id="overview">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">01</span><span>Project overview</span></div>
+        <h2>Reference game analysis: Splash Buster</h2>
+      </div>
+
+      <p class="lead">Casual physics-destruction games have become a familiar mobile category: the player shoots at a stacked object, the stack collapses, and the payoff is the collapse itself. Splash Buster is the clearest demonstration of how well that loop works on a touch screen.</p>
+
+      <h3><span class="hnum">1.1</span>Background of physics-destruction mobile games</h3>
+      <p>In the reference game, the player adjusts the angle of a cannon and launches heavy balls at the weak points of stacked towers. Ammunition is limited, so progress depends on triggering chain reactions rather than on firing constantly. Tap-to-shoot controls keep the entry barrier low, and the title holds a 4.9 rating on the Play Store with more than one million installs — evidence that the framework travels well to a small screen.</p>
+
+      <figure>
+        <div class="proof">
+          <div><span class="pv">4.9</span><span class="pl">Play Store rating, 62K reviews</span></div>
+          <div><span class="pv">1M+</span><span class="pl">installs recorded on the listing</span></div>
+          <div><span class="pv">1</span><span class="pl">projectile type across all levels</span></div>
+        </div>
+        <div class="shots">
+          <img class="phone" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Ugx3bxZfropI9exPcbncQZApnqg" alt="Splash Buster gameplay: a cannon aiming at a tower of purple and gold crates, 17 shots remaining">
+          <img class="phone" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/RVs1bysseoJ6PDxXiMycvGnDnOb" alt="Splash Buster gameplay: crates tumbling off a platform after a hit">
+          <img class="phone" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/DOuAb34mYofv4Wx4WDYcRObVnGd" alt="Splash Buster gameplay: a collapsing stack of gold and purple crates">
+        </div>
+        <figcaption><span class="fno">Fig. 1</span>The reference loop in play: a fixed cannon position, a visible ammunition counter, a stack built to fall. Figures quoted from the Play Store listing captured in the project materials.</figcaption>
+      </figure>
+
+      <h3><span class="hnum">1.2</span>Limitations of the reference game, and the design motivation</h3>
+      <p>The original loop is straightforward, but it is also thin. It offers one projectile type, and its levels are mostly randomly stacked clutter towers assembled with little regard for load-bearing structure. Players tend to clear stages by trial and luck, which leaves limited room for deliberate planning.</p>
+
+      <div class="tablewrap">
+        <table>
+          <caption><span class="tno">Table 1</span>What the reference game does, and how this project answers it</caption>
+          <colgroup><col style="width:31%"><col style="width:31%"><col style="width:38%"></colgroup>
+          <thead>
+            <tr><th>In Splash Buster</th><th>Cost to the player</th><th>Response in Tabletop Wreckage</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>A single projectile type</td><td>No trade-off between precision and force; every shot solves the same problem.</td><td>Standard rounds, a heavy cannon and a machine gun, each answering a different structure.</td></tr>
+            <tr><td>Randomly stacked clutter towers</td><td>No readable load path, so collapse feels accidental.</td><td>Household objects placed on a coffee table with real structural roles — bricks carry load, books resist, glasses shatter.</td></tr>
+            <tr><td>Clearance by trial and luck</td><td>Skill expression is limited to aim correction.</td><td>Structural observation, angle planning and risk avoidance, with a vase that must survive the run.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Building on the shooting-and-destruction framework, this project redefines the theme as a household tabletop. Instead of derelict buildings or clutter towers, levels sit on a flat coffee-table platform filled with stacked building bricks, drinking glasses and hard-cover books. A protected antique vase is introduced as the critical constraint, so the player's job is not destruction alone: it is destruction with a boundary.</p>
+    </section>
+
+    <!-- ===== 2 adaptation ===== -->
+    <section id="adaptation">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">02</span><span>Project adaptation and design</span></div>
+        <h2>From a demolition site to a coffee table</h2>
+      </div>
+
+      <h3><span class="hnum">2.1</span>A new theme, and a new objective</h3>
+      <p>Keeping the core framework of the reference game, the project abandons the building-demolition theme and moves to a household coffee-table battlefield. Play revolves around knocking target household objects off the tabletop platform while the protected antique vase stays intact on the surface — a win condition that turns every shot into a decision about what might also move.</p>
+
+      <figure>
+        <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/AlpGbsab5oPE3lx3ehvcpUGNn5g" alt="In-game HUD prototype above a tabletop scene: 20 of 20 standard rounds, coin balance, target glasses counter, and a protected-vase warning">
+        <figcaption><span class="fno">Fig. 2</span>HUD prototype from the current build: remaining standard rounds (20/20), coin balance, remaining target count, and the protected-vase warning over the table. On-screen labels are Simplified Chinese, as captured.</figcaption>
+      </figure>
+
+      <h3><span class="hnum">2.2</span>Two-layer resource mechanism</h3>
+      <p>Each level grants a fixed quota of 20 standard projectiles, which cannot be bought with coins. Coins are a persistent, cross-level currency earned after completing stages, and they serve two purposes: permanently unlocking cosmetic turret skins in the main-menu store, or buying one-off consumable special weapons during an active level. Either the heavy cannon or the machine gun can be bought mid-combat for a temporary advantage in that run.</p>
+
+      <div class="mech">
+        <div class="col">
+          <h4>Standard rounds</h4>
+          <div class="tagline">Per level · not purchasable · 20</div>
+          <ul>
+            <li>The fixed budget that defines each level's difficulty.</li>
+            <li>Remaining rounds convert into stars at the end of a level.</li>
+            <li>Destroyed on impact with a target; they do not penetrate.</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Coins</h4>
+          <div class="tagline">Persistent · cross-level · earned</div>
+          <ul>
+            <li>Earned by completing stages, plus bonuses from stars.</li>
+            <li>Spent in the main-menu store on permanent cosmetic skins.</li>
+            <li>Spent inside a level on a one-off heavy cannon or machine gun.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3><span class="hnum">2.3</span>Four-direction turret shooting</h3>
+      <p>The camera stays at a fixed 45-degree overhead angle, but the player may switch between four firing positions around the table — bottom, top, left and right. All four positions draw from the same ammunition pool, so switching is a change of angle rather than extra resources. This solves the ballistic dead-lock that a single firing direction creates when the protected vase stands between the cannon and a target.</p>
+
+      <figure>
+        <svg viewBox="0 0 640 330" role="img" aria-label="Top-down diagram of the coffee table with four switchable turret positions at its edges and a protected vase standing in the middle" style="width:100%;border:1px solid var(--line);background:var(--surface)">
+          <rect x="170" y="64" width="300" height="160" fill="#E4D9C6" stroke="#B9A98C" stroke-width="1.5"/>
+          <rect x="170" y="224" width="300" height="12" fill="#C9B393"/>
+
+          <text x="186" y="208" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#6B6558">coffee table</text>
+          <text x="186" y="222" font-family="IBM Plex Sans, sans-serif" font-size="10.5" fill="#8B8271">judgement surface</text>
+
+          <path d="M320 126c4 0 7 3 7 7 0 3-1.5 5-3.5 6 9 4 15 11 15 20 0 10-8 16-18.5 16S302 163 302 153c0-9 6-16 15-20-2-1-3.5-3-3.5-6 0-4 3-7 6.5-7z" fill="#214C86"/>
+          <text x="320" y="116" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="10.5" fill="#214C86">protected vase</text>
+
+          <g font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#191A1C">
+            <circle cx="320" cy="64" r="5.5" fill="#A33A28"/><text x="320" y="42" text-anchor="middle">top</text>
+            <circle cx="320" cy="236" r="5.5" fill="#A33A28"/><text x="320" y="259" text-anchor="middle">bottom</text>
+            <circle cx="170" cy="144" r="5.5" fill="#A33A28"/><text x="112" y="148" text-anchor="middle">left</text>
+            <circle cx="470" cy="144" r="5.5" fill="#A33A28"/><text x="528" y="148" text-anchor="middle">right</text>
+          </g>
+
+          <g stroke="#214C86" stroke-width="1.2" opacity=".75">
+            <line x1="320" y1="72" x2="320" y2="120"/>
+            <line x1="320" y1="228" x2="320" y2="180"/>
+            <line x1="178" y1="144" x2="298" y2="144"/>
+            <line x1="462" y1="144" x2="342" y2="144"/>
+          </g>
+
+          <text x="320" y="300" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#6B6558">Four positions around one table, drawing on one ammunition pool</text>
+        </svg>
+        <figcaption><span class="fno">Fig. 3</span>Turret positions around the table. The vase blocks a straight line from a single position, which is why switching is a mechanic rather than a convenience.</figcaption>
+      </figure>
+
+      <h3><span class="hnum">2.4</span>Level design and object physical rules</h3>
+      <p>Scenes are re-imagined as household coffee-table platforms with three categories of interactive object. Each type behaves differently under fire, so the layout reads as a structure rather than a pile.</p>
+
+      <div class="tablewrap">
+        <table>
+          <caption><span class="tno">Table 2</span>Three interactive object types and the protected vase</caption>
+          <colgroup><col style="width:22%"><col style="width:26%"><col style="width:24%"><col style="width:28%"></colgroup>
+          <thead>
+            <tr><th>Object</th><th>Physical role</th><th>On impact</th><th>Consequence for play</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Building bricks</td><td>Load-bearing structure</td><td>Medium durability</td><td>Removing a support point collapses the assembly above it.</td></tr>
+            <tr><td>Drinking glasses</td><td>Fragile target</td><td>Shatter on contact</td><td>Cheap to clear individually, easy to lose in a collapse.</td></tr>
+            <tr><td>Hard-cover books</td><td>Shield and obstacle</td><td>High hardness, deflects</td><td>Projectiles glance off, so they must be moved rather than broken.</td></tr>
+            <tr><td><em>Antique vase</em></td><td><em>Protected object</em></td><td><em>Contact ends the run</em></td><td><em>Constrains every angle; debris from destroyed targets cannot damage it.</em></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <h4>The vase rule</h4>
+        <p>Mission failure is triggered only when a player-fired projectile directly collides with the vase. Flying debris from destroyed targets will not damage it. A projectile is destroyed when it hits a target object and cannot pass through, and a level is complete only when every target object is off the tabletop while the vase remains intact on the surface.</p>
+      </div>
+    </section>
+
+    <!-- ===== 3 fun ===== -->
+    <section id="fun">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">03</span><span>Game fun and player challenge</span></div>
+        <h2>What the player actually enjoys</h2>
+      </div>
+
+      <p class="lead">The adaptation moves the pleasure of the game away from "knock it down" and toward "work out how it will come down" — with a fragile object in the room that punishes a careless answer.</p>
+
+      <h3><span class="hnum">3.1</span>Achievement from observation and structural prediction</h3>
+      <p>The first source of enjoyment is the satisfaction of reading a structure. Players examine the layout of stacked brick assemblies, identify which pieces carry load, and plan a firing direction by switching among the four turret positions. Hitting a critical supporting point and triggering a chain collapse of stacked household objects gives the strong, legible payoff that the reference game only delivers by accident.</p>
+
+      <h3><span class="hnum">3.2</span>Strategic trade-offs and risk–reward decisions</h3>
+      <p>The second is the pleasure of a genuine trade-off. Limited standard ammunition is the core challenge of each level, so the player has to decide whether to spend ordinary projectiles taking a structure down step by step, or to spend accumulated coins on a special weapon mid-battle for a burst of destructive power. Every one of those decisions also carries the risk of touching the protected vase. Several different strategies can complete a level, which is what makes replaying it worthwhile.</p>
+
+      <h3><span class="hnum">3.3</span>A cathartic visual and audio destruction experience</h3>
+      <p>The third is simply the release of it. Disintegrating glasses, tumbling books and collapsing brickwork, paired with matching impact sound, turn a correct structural decision into a physical event the player can watch happen.</p>
+
+      <figure>
+        <div class="shots">
+          <img class="phone" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/ICmfb5jbyoW7ThxwjTRcRLY0nqc" alt="A cannonball striking a purple crate, with debris and impact sparks">
+          <img class="phone" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/YOdIbIBGfoAHs8xz2Z7cNWaxnyb" alt="Cannon firing with a burst of light and smoke at the base of a platform">
+        </div>
+        <figcaption><span class="fno">Fig. 4</span>Impact and firing feedback in the reference game — the audiovisual beat that Tabletop Wreckage keeps, but attaches to structural collapse rather than to score.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ===== 4 gameplay ===== -->
+    <section id="gameplay">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">04</span><span>Core gameplay and systems</span></div>
+        <h2>The loop, the rules, and the weapons</h2>
+      </div>
+
+      <h3><span class="hnum">4.1</span>Basic game flow and level rules</h3>
+      <p>The project contains three designed household tabletop levels. On entering a level the player observes the tabletop scene through a fixed 45-degree overhead camera, switches among the four turret positions, and spends standard projectiles to shoot targets. The coffee-table surface is the judgement platform: a level is won when every target household object has been knocked off it and the protected vase remains intact, and lost when a player projectile directly hits the vase, or when all standard projectiles are gone while targets still stand on the table.</p>
+      <p>After completion, the player is awarded stars calculated from the remaining standard projectiles. More leftover ammunition means more stars, and stars add a coin bonus on top of the base reward for the stage — so the resource the level forces you to spend becomes the score you are measured on.</p>
+
+      <figure>
+        <svg viewBox="0 0 720 590" role="img" aria-label="Game flow: main menu to start level to combat loop to actions to win-lose check, branching to win or lose, with a dashed loop back for the next shot" style="width:100%;border:1px solid var(--line);background:var(--surface)">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="#6B6558"/>
+            </marker>
+            <marker id="arC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="#214C86"/>
+            </marker>
+          </defs>
+
+          <!-- store -->
+          <rect x="470" y="20" width="210" height="58" rx="3" fill="#F6F2E9" stroke="#B9B09E"/>
+          <text x="580" y="42" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">Store</text>
+          <text x="580" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#6B6558">unlock turret skins with coins</text>
+          <line x1="470" y1="49" x2="404" y2="49" stroke="#6B6558" stroke-width="1.4" marker-end="url(#ar)"/>
+          <line x1="404" y1="57" x2="470" y2="57" stroke="#6B6558" stroke-width="1.4" marker-end="url(#ar)"/>
+
+          <!-- main chain -->
+          <rect x="170" y="20" width="230" height="58" rx="3" fill="#F6F2E9" stroke="#B9B09E"/>
+          <text x="285" y="54" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">Main menu</text>
+
+          <rect x="170" y="108" width="230" height="58" rx="3" fill="#F6F2E9" stroke="#B9B09E"/>
+          <text x="285" y="142" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">Start level</text>
+
+          <rect x="170" y="196" width="230" height="72" rx="3" fill="#F6F2E9" stroke="#B9B09E"/>
+          <text x="285" y="226" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">In-level combat loop</text>
+          <text x="285" y="245" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#6B6558">observe · aim · fire</text>
+
+          <rect x="170" y="308" width="230" height="88" rx="3" fill="#F6F2E9" stroke="#B9B09E"/>
+          <text x="285" y="334" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#191A1C">Switch between four turret positions</text>
+          <text x="285" y="354" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#191A1C">Fire a standard projectile</text>
+          <text x="285" y="374" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#191A1C">Buy or activate a special weapon</text>
+
+          <rect x="170" y="436" width="230" height="64" rx="3" fill="#F6F2E9" stroke="#214C86"/>
+          <text x="285" y="474" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">Check win / lose condition</text>
+
+          <line x1="285" y1="78" x2="285" y2="104" stroke="#6B6558" stroke-width="1.4" marker-end="url(#ar)"/>
+          <line x1="285" y1="166" x2="285" y2="192" stroke="#6B6558" stroke-width="1.4" marker-end="url(#ar)"/>
+          <line x1="285" y1="268" x2="285" y2="304" stroke="#6B6558" stroke-width="1.4" marker-end="url(#ar)"/>
+          <line x1="285" y1="396" x2="285" y2="432" stroke="#6B6558" stroke-width="1.4" marker-end="url(#ar)"/>
+
+          <!-- loop back -->
+          <path d="M170 458 L136 458 L136 232 L166 232" fill="none" stroke="#214C86" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#arC)"/>
+          <text x="126" y="352" text-anchor="end" font-family="IBM Plex Sans, sans-serif" font-size="10.5" fill="#214C86" transform="rotate(-90 126 352)">another shot</text>
+
+          <!-- outcomes -->
+          <rect x="470" y="408" width="210" height="76" rx="3" fill="#ECF1EA" stroke="#4F6350"/>
+          <text x="580" y="434" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">Win</text>
+          <text x="580" y="453" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4F6350">all targets off the table</text>
+          <text x="580" y="469" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4F6350">vase intact · stars and coins</text>
+
+          <rect x="470" y="504" width="210" height="76" rx="3" fill="#F5EBE7" stroke="#A33A28"/>
+          <text x="580" y="530" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="#191A1C">Lose</text>
+          <text x="580" y="549" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#A33A28">projectile hits the vase</text>
+          <text x="580" y="565" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#A33A28">or standard ammo runs out</text>
+
+          <path d="M400 452 L466 440" fill="none" stroke="#4F6350" stroke-width="1.4" marker-end="url(#ar)"/>
+          <path d="M400 470 L466 512" fill="none" stroke="#A33A28" stroke-width="1.4" marker-end="url(#ar)"/>
+        </svg>
+        <figcaption><span class="fno">Fig. 5</span>The game loop. The dashed path is the ordinary shot: check the outcome, then return for another attempt until the level is won or lost.</figcaption>
+      </figure>
+
+      <h3><span class="hnum">4.2</span>Weapons and the in-level purchase mechanic</h3>
+      <p>Two special consumable weapons exist. Neither is available by default: both require persistent cross-level coins, spent during level gameplay. The player can buy them several times within a single level as long as the coins last, and each purchase yields one use, consumed right after activation.</p>
+
+      <div class="mech">
+        <div class="col">
+          <h4>Heavy cannon</h4>
+          <div class="tagline">One high-impact projectile · coin purchase in-level</div>
+          <ul>
+            <li>Effective against large brick load-bearing structures.</li>
+            <li>Answers the problem standard rounds cannot: a mass that has to be broken rather than nudged.</li>
+            <li>Single use per purchase.</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h4>Machine gun</h4>
+          <div class="tagline">Short manual burst · unlimited small projectiles</div>
+          <ul>
+            <li>Best for clearing scattered fragile objects such as drinking glasses.</li>
+            <li>Trades precision for coverage within a short firing window.</li>
+            <li>Single use per purchase.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout">
+        <h4>Standard projectiles</h4>
+        <p>Supplied at a fixed quota of 20 per level and never purchasable with coins. A projectile is destroyed immediately on colliding with a target object and cannot penetrate it; debris from destroyed objects will not trigger damage to the antique vase.</p>
+      </div>
+    </section>
+
+    <!-- ===== 5 scope ===== -->
+    <section id="scope">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">05</span><span>Project scope</span></div>
+        <h2>What is in, what is optional, what is out</h2>
+      </div>
+
+      <p class="lead">The scope is deliberately split three ways so that a solo developer protects the core: mandatory systems define the deliverable, bonus features are attempted only after those are complete, and out-of-scope content is named in advance rather than silently dropped later.</p>
+
+      <div class="scope">
+        <div class="card">
+          <h4>
+            <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" fill="none" stroke="#214C86" stroke-width="1.4"/><path d="M4 8.5l2.6 2.6L12 5" fill="none" stroke="#214C86" stroke-width="1.6"/></svg>
+            Mandatory core features
+          </h4>
+          <ul>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Household-themed level design</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Physics for three object types: bricks, glasses, hard-cover books</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Two weapon types plus the standard projectile</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Two-layer resource system: fixed level ammunition, persistent cross-level coins</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Collapse mechanics using kinematic rigid-body switching</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Four-direction turret switching</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Three complete playable levels</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Basic UI, in-level special-weapon purchase UI, victory and defeat screens</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Star rating and coin reward logic</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.4 2.4L10 3" fill="none" stroke="#214C86" stroke-width="1.5"/></svg><span>Scene lighting, collision sound effects and object-tailored particle effects</span></li>
+          </ul>
+          <p class="count">10 items · required for submission</p>
+        </div>
+
+        <div class="card">
+          <h4>
+            <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" fill="none" stroke="#4F6350" stroke-width="1.4"/><path d="M8 4v8M4 8h8" fill="none" stroke="#4F6350" stroke-width="1.4"/></svg>
+            Bonus features
+          </h4>
+          <ul>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="2.4" fill="#4F6350"/></svg><span>Collapse replay camera</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="2.4" fill="#4F6350"/></svg><span>Additional alternative household scene layouts</span></li>
+          </ul>
+          <p class="count">Attempted only after all mandatory systems are complete</p>
+        </div>
+
+        <div class="card">
+          <h4>
+            <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" fill="none" stroke="#A33A28" stroke-width="1.4"/><path d="M4 8h8" fill="none" stroke="#A33A28" stroke-width="1.4"/></svg>
+            Out of scope
+          </h4>
+          <ul>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" fill="none" stroke="#A33A28" stroke-width="1.4"/></svg><span>High-precision mesh fragmentation</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" fill="none" stroke="#A33A28" stroke-width="1.4"/></svg><span>NPC animation</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" fill="none" stroke="#A33A28" stroke-width="1.4"/></svg><span>Weapon numerical upgrade system</span></li>
+            <li><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" fill="none" stroke="#A33A28" stroke-width="1.4"/></svg><span>In-level purchase of cosmetic skins — skins carry no combat bonus</span></li>
+          </ul>
+          <p class="count">Excluded to protect the solo development schedule</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 6 prototype progress ===== -->
+    <section id="progress">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">06</span><span>Prototype progress</span></div>
+        <h2>What the build already does</h2>
+      </div>
+
+      <p class="lead">A short capture from 11 November 2026, recorded in the iPhone 12 Pro Max simulator, is the first evidence that the core mechanics work together rather than in isolation: a stack that falls, a turret that aims and rotates, and shots that register where they land.</p>
+
+      <div class="demo">
+        <div class="device">
+          <video controls playsinline preload="metadata" poster="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/WznwbJAhyoNQ5CxBszccOrzTnHe">
+            <source src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/JAJ0bltFAokihMxOdGDco33BnNg" type="video/mp4">
+            Your browser cannot play this video. The capture shows the current build in the iOS simulator.
+          </video>
+        </div>
+        <div class="demo-notes">
+          <h4>Working in the build</h4>
+          <ul class="checks">
+            <li><b>Physics collapse.</b> A stack of hard-cover books holds its shape on the coffee table, then falls once the support underneath it is knocked out. Removing one piece moves the rest, instead of everything dropping at the moment of impact.</li>
+            <li><b>Turret aim, fire and rotation.</b> The reticle follows the aim, the shot leaves the turret, and the turret can be rotated around the table while the camera stays at the fixed overhead angle.</li>
+            <li><b>No tunnelling at speed.</b> Fast projectiles used to pass straight through meshes between physics steps. Impact is now registered on contact, so a shot that visibly hits a target is counted as a hit.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="demo-cap">Video: 11 seconds, iPhone 12 Pro Max simulator, 11 November 2026. The desktop cursor is part of the screen capture; the build itself has no HUD yet.</p>
+
+      <div class="callout">
+        <h4>Where this leaves Phase 2</h4>
+        <p>The three mechanics above are the ones the Phase 2 milestone names first. Still open in that phase: the basic UI, the two-layer resource system with in-level purchase logic, and gathering the final asset set.</p>
+      </div>
+    </section>
+
+    <!-- ===== 7 timeline ===== -->
+    <section id="timeline">
+      <div class="sec-head">
+        <div class="seclabel"><span class="num">07</span><span>Development timeline</span></div>
+        <h2>Five phases, from concept to submission</h2>
+      </div>
+
+      <p>The schedule is organised as five phases with an individual milestone list for each. Phase 1 runs from 15 October to 12 November 2026; Phase 3 also carries the interim report and the first-semester build.</p>
+
+      <div class="timeline">
+        <div class="phase current">
+          <div class="when">
+            <div class="range">15 Oct 2026<br>– 12 Nov 2026</div>
+            <div class="dur">Phase 1 · in progress</div>
+          </div>
+          <div class="dot"><span></span></div>
+          <div class="body">
+            <h4>Concept and proposal</h4>
+            <p>Lock the concept, the tabletop scene and the mobile camera before any production work begins.</p>
+            <ul>
+              <li>Review the reference game and finalise the game concept and household tabletop scene.</li>
+              <li>Define the visual style of the standard projectile, heavy cannon and machine gun; draft weapon scripts and test logic for bugs.</li>
+              <li>Test the fixed 45-degree overhead camera against a 9:16 mobile field of view.</li>
+              <li>Set up the Unity project and run initial physics tests on brick load-bearing collapse.</li>
+              <li>Sketch the three levels and draft UI sketches for the store and the in-level purchase panel.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="when">
+            <div class="range">13 Nov 2026<br>– 10 Dec 2026</div>
+            <div class="dur">Phase 2 · core prototype</div>
+          </div>
+          <div class="dot"><span></span></div>
+          <div class="body">
+            <h4>Core prototype development</h4>
+            <p>The systems that define the game become playable, with placeholder art standing in for final assets.</p>
+            <ul>
+              <li>Implement turret aiming, shooting, four-direction switching and household-object chain collapse.</li>
+              <li>Build a playable prototype using simple placeholder assets.</li>
+              <li>Build basic UI, the two-layer resource system and in-level purchase logic; test collapse triggered by destroying brick support points.</li>
+              <li>Gather assets: bricks, drinking glasses, hard-cover books, antique vase and turret models.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="when">
+            <div class="range">11 Dec 2026<br>– 25 Feb 2027</div>
+            <div class="dur">Phase 3 · production</div>
+          </div>
+          <div class="dot"><span></span></div>
+          <div class="body">
+            <h4>System refinement and level production</h4>
+            <p>Balance and content: the three levels are built and tuned, and the first-semester report is written from the work completed.</p>
+            <ul>
+              <li>Tune balance across the standard projectile, heavy cannon and machine gun.</li>
+              <li>Develop three complete levels and fine-tune overall difficulty.</li>
+              <li>Refine the full UI: store, star rating display and turret-switching controls.</li>
+              <li>Produce a partial game build with the interim report and progress report.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="when">
+            <div class="range">4 Mar 2027<br>– 25 Mar 2027</div>
+            <div class="dur">Phase 4 · stabilise</div>
+          </div>
+          <div class="dot"><span></span></div>
+          <div class="body">
+            <h4>Testing and optimisation</h4>
+            <p>No new features. The phase exists to make what is already built reliable and presentable.</p>
+            <ul>
+              <li>Debug turret switching, coin consumption, win–loss judgement and special-weapon activation.</li>
+              <li>Optimise performance and integrate particle effects, collision sound and art resources.</li>
+              <li>Test all three levels against the win–loss rules, star calculation and coin rewards.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="when">
+            <div class="range">1 Apr 2027<br>– 15 Apr 2027</div>
+            <div class="dur">Phase 5 · delivery</div>
+          </div>
+          <div class="dot"><span></span></div>
+          <div class="body">
+            <h4>Final delivery and documentation</h4>
+            <p>Packaging, backup and the material the assessment depends on.</p>
+            <ul>
+              <li>Package the game build and back up the full project source.</li>
+              <li>Record the gameplay demo and the technical explanation video.</li>
+              <li>Prepare presentation slides and finalise the FYP report for submission.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="endnote">
+      <span>Tabletop Wreckage — Final Year Project progress report, Chan Yat Leong, 11 November 2026.</span>
+      <span>Game concept, systems, schedule and build status as reported on 11 November 2026.</span>
+    </div>
+
+  </article>
+  </main>
+</div>
+
+<script>
+(function(){
+  var toggle = document.getElementById('navToggle');
+  var panel = document.getElementById('navPanel');
+  if (toggle && panel) {
+    toggle.addEventListener('click', function(){
+      var open = panel.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.textContent = open ? 'Close' : 'Contents';
+    });
+    panel.addEventListener('click', function(e){
+      if (e.target.closest('a')) {
+        panel.classList.remove('open');
+        toggle.setAttribute('aria-expanded','false');
+        toggle.textContent = 'Contents';
+      }
+    });
+  }
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('#railNav a'));
+  var sections = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  var ticking = false;
+  function spy(){
+    var idx = 0;
+    sections.forEach(function(sec, i){
+      if (sec && sec.getBoundingClientRect().top <= window.innerHeight * 0.45) idx = i;
+    });
+    links.forEach(function(l, i){ l.classList.toggle('active', i === idx); });
+    ticking = false;
+  }
+  function onScroll(){
+    if (!ticking) { ticking = true; window.requestAnimationFrame(spy); }
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', onScroll);
+  spy();
+})();
+</script>
+</body>
+</html>
